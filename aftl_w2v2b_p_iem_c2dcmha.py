@@ -33,13 +33,14 @@ timesteps = 350
 checkpoint = './checkpoint'
 device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
 src_path = input("please enther the absolout path for IEMOCAP Sessions on your system\n(e.g. '/home/IEMOCAP' if wav files are in /home/IEMOCAP/Session*/sentences/wav/Ses0*/*.wav )\n")
-if len(glob(f"{src_path}/Session*/sentences/wav/Ses0*/*.wav")) == 0 or len(glob(f"{src_path}/Session*/sentences/wav/Ses0*/*.pt")) == 0:
+if len(glob(f"{src_path}/Session*/sentences/wav/Ses0*/*.wav")) == 0 and len(glob(f"{src_path}/Session*/sentences/wav/Ses0*/*.pt")) == 0:
     logger.error(f"{src_path} is not correct, there isn't any wav or pt file in\n\t{src_path}/Session*/sentences/wav/Ses0*/*.wav")
     exit()
+
 if len(glob(f"{src_path}/Session*/sentences/wav/Ses0*/*.pt")) > 0:
     con = input("Do you want to remove pt files and generate them again(y/n)?")
-if con == "y":
-    os.system(f'rm "{src_path}/Session*/sentences/wav/Ses0*/*.pt"')
+    if con == "y":
+        os.system(f'rm {src_path}/Session*/sentences/wav/Ses0*/*.pt')
 
 data_dir = Path(src_path)
 
