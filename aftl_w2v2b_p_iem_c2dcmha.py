@@ -508,18 +508,20 @@ def train(train_loader, valid_loader, test_loader, valid_label, test_label, pern
 
 import gc
 
-total_acval = []
-total_actst = []
-total_prval = []
-total_prtst = []
-total_waval = []
-total_watst = []
-total_reval = []
-total_retst = []
-total_fsval = []
-total_fstst = []
-total_conval = []
-total_contst = []
+total_metrics = {
+    'acval': [],
+    'actst': [],
+    'prval': [],
+    'prtst': [],
+    'waval': [],
+    'watst': [],
+    'reval': [],
+    'retst': [],
+    'fsval': [],
+    'fstst': [],
+    'conval': [],
+    'contst': []
+}
 for fold in range(10):
     eval_idx  = [str(fi_) for fi_ in ses[fold]]
     test_idx  = [str(fi_) for fi_ in ses[(fold+1)%9]]
@@ -557,47 +559,44 @@ for fold in range(10):
     idx_best = np.argmax(valid_acc)
     print("Best of fold %d; valid_Acc: %3.4g valid_precesion: %3.4g valid_WeightedAcc: %3.4g valid_recall: %3.4g valid_fscore: %3.4g %d" %(fold, valid_acc[idx_best], *valid_inf[idx_best], idx_best))
     print("Best of fold %d; test_Acc: %3.4g test_precesion: %3.4g test_WeightedAcc: %3.4g test_recall: %3.4g test_fscore: %3.4g" %(fold, *test_inf[idx_best]))
-    total_acval.append(sum(valid_acc)/len(valid_acc))
-    total_prval.append(sum([valid_inf[id_][0] for id_ in range(len(valid_inf))])/len(valid_inf))
-    total_waval.append(sum([valid_inf[id_][1] for id_ in range(len(valid_inf))])/len(valid_inf))
-    total_reval.append(sum([valid_inf[id_][2] for id_ in range(len(valid_inf))])/len(valid_inf))
-    total_fsval.append(sum([valid_inf[id_][3] for id_ in range(len(valid_inf))])/len(valid_inf))
-    total_actst.append(sum([test_inf[id_][0] for id_ in range(len(test_inf))])/len(test_inf))
-    total_prtst.append(sum([test_inf[id_][1] for id_ in range(len(test_inf))])/len(test_inf))
-    total_watst.append(sum([test_inf[id_][2] for id_ in range(len(test_inf))])/len(test_inf))
-    total_retst.append(sum([test_inf[id_][3] for id_ in range(len(test_inf))])/len(test_inf))
-    total_fstst.append(sum([test_inf[id_][4] for id_ in range(len(test_inf))])/len(test_inf))
-    total_conval.append(valid_confusion[idx_best])
-    total_contst.append(test_confusion[idx_best])
-    del train_data, train_label, train_label_pf, train_sample, train_emt
-    del test_data, test_label, test_label_pf, test_sample, test_emt 
-    del eval_data, eval_label, eval_label_pf, eval_sample, eval_emt
-    del train_loader, test_loader, eval_loader
-    
+    total_metrics['acval'].append(sum(valid_acc)/len(valid_acc))
+    total_metrics['actst'].append(sum([t[0] for t in test_inf])/len(test_inf))
+    total_metrics['prval'].append(sum([t[0] for t in valid_inf])/len(valid_inf))
+    total_metrics['prtst'].append(sum([t[1] for t in test_inf])/len(test_inf))
+    total_metrics['waval'].append(sum([t[1] for t in valid_inf])/len(valid_inf))
+    total_metrics['watst'].append(sum([t[2] for t in test_inf])/len(test_inf))
+    total_metrics['reval'].append(sum([t[2] for t in valid_inf])/len(valid_inf))
+    total_metrics['retst'].append(sum([t[3] for t in test_inf])/len(test_inf))
+    total_metrics['fsval'].append(sum([t[3] for t in valid_inf])/len(valid_inf))
+    total_metrics['fstst'].append(sum([t[4] for t in test_inf])/len(test_inf))
+    total_metrics['conval'].append(valid_confusion[idx_best])
+    total_metrics['contst'].append(test_confusion[idx_best])
+
+    del train_data, train_label, train_label_pf, train_sample, train_emt, test_data, test_label, test_label_pf, test_sample, test_emt, eval_data, eval_label, eval_label_pf, eval_sample, eval_emt, train_loader, test_loader, eval_loader
     gc.collect()
 
 
 print("\nAVG Acc Val Test")
-print(sum(total_acval)/len(total_acval))
-print(sum(total_actst)/len(total_actst))
+print(sum(total_metrics['acval'])/len(total_metrics['acval']))
+print(sum(total_metrics['actst'])/len(total_metrics['actst']))
 
 print("\nAVG Precision Val Test")
-print(sum(total_prval)/len(total_prval))
-print(sum(total_prtst)/len(total_prtst))
+print(sum(total_metrics['prval'])/len(total_metrics['prval']))
+print(sum(total_metrics['prtst'])/len(total_metrics['prtst']))
 
 print("\nAVG Recall Val Test")
-print(sum(total_reval)/len(total_reval))
-print(sum(total_retst)/len(total_retst))
+print(sum(total_metrics['reval'])/len(total_metrics['reval']))
+print(sum(total_metrics['retst'])/len(total_metrics['retst']))
 
 print("\nAVG WAcc Val Test")
-print(sum(total_waval)/len(total_waval))
-print(sum(total_watst)/len(total_watst))
+print(sum(total_metrics['waval'])/len(total_metrics['waval']))
+print(sum(total_metrics['watst'])/len(total_metrics['watst']))
 
 print("\nAVG Fscore Val Test")
-print(sum(total_fsval)/len(total_fsval))
-print(sum(total_fstst)/len(total_fstst))
+print(sum(total_metrics['fsval'])/len(total_metrics['fsval']))
+print(sum(total_metrics['fstst'])/len(total_metrics['fstst']))
 
 print("\nBest Confusion Valid")
-print(np.average(total_conval, axis=0))
+print(np.average(total_metrics['conval'], axis=0))
 print("\nBest Confusion Test")
-print(np.average(total_contst, axis=0))
+print(np.average(total_metrics['contst'], axis=0))
