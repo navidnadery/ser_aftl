@@ -44,6 +44,8 @@ if len(glob(f"{src_path}/*.pt")) > 0:
 else:
     con = "y"
 
+chpoint = input("Please Enter the name of checkpoint you want to fine-tune on (located in checkpoint dir)\n") or "best_model000.pth"
+
 data_dir = Path(src_path)
 
 ## Map emotions to categories
@@ -423,8 +425,6 @@ total_wa = []
 total_re = []
 total_fs = []
 total_co = []
-
-chpoint = input("Please Enter the name of checkpoint you want to fine-tune on (located in checkpoint dir)\n") or "best_model000.pth"
 
 for f_, fold in enumerate(range(0,10,2)):
     train_idx = [str(fi_) for fo in [ses[fold], ses[(fold+1)]] for fi_ in fo]
