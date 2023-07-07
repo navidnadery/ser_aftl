@@ -7,3 +7,6 @@ This is the implementation for the paper "Cross Corpus Speech Emotion Recognitio
 
 ## IEMOCAP AFTL -> Source Domain
 Since IEMOCAP is considered the source corpus, we need to run the corresponding IEMOCAP code first. Run "aftl_w2v2b_p_iem_c2dcmha.py" to extract the IEMOCAP features, initialize the model, and train it using the extracted features. You can run it using: `python aftl_w2v2b_p_iem_c2dcmha.py`, it asks for the path of IEMOCAP where 5 sessions are available. Then, if there exist *.pt files in the corresponding directory, it asks if you want to remove them and extract/save again.
+
+## EMODB (Berlin) AFTL -> Target Domain
+EmoDB is considered as one of the target corpora, consequently we should fine-tune a trained model (on IEMOCAP) using 20% of this corpus splitted on speakers. 
