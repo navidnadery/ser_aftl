@@ -8,7 +8,7 @@ import os
 import torch
 import torchaudio
 from torch import nn
-from disvoice.prosody import Prosody
+from disvoice.prosody import Prosody # from prosody import Prosody
 from contrastive_center_loss import ContrastiveCenterLoss
 from loss_functions import AngularPenaltySMLoss#, AM_Softmax
 # from aamsoftmax import LossFunction
@@ -41,6 +41,8 @@ if len(glob(f"{src_path}/Session*/sentences/wav/Ses0*/*.pt")) > 0:
     con = input("Do you want to remove pt files and generate them again(y/n)?")
     if con == "y":
         os.system(f'rm {src_path}/Session*/sentences/wav/Ses0*/*.pt')
+else:
+    con = "y"
 
 data_dir = Path(src_path)
 
