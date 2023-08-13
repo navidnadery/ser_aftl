@@ -3,6 +3,8 @@
 
 This repository contains the implementation of the paper titled "Cross Corpus Speech Emotion Recognition using Transfer Learning and Attention-based Fusion of Wav2vec2 and Prosody features". The paper presents a novel approach to speech emotion recognition that leverages transfer learning and attention mechanisms to fuse Wav2vec2 and prosody features effectively. This implementation aims to reproduce the results presented in the paper and provide a basis for further research in the field of speech emotion recognition.
 
+https://authors.elsevier.com/c/1hV7w3OAb999JE
+
 ## Pre-requisites
 * Tested on python 3.9.0 and 3.8.2, but should work on other versions as well.
 Install python requirements: `pip install -r requirements.txt`.
