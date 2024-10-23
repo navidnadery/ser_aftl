@@ -24,8 +24,16 @@ To do this, run the `aftl_w2v2b_p_I_emo_c2dcmha.py` script. This script will ext
 
 The script will prompt you to provide the path to the EmoDB directory where all the ".wav" files are located. Since a checkpoint (saved model) is needed for fine-tuning, the script will also ask for the name of a checkpoint to load and fine-tune. If no response is given, it will load the "best_model000.pth" by default.
 
-Finally, if there are any existing ".pt" files in the corresponding directory, the script will ask if you want to remove them and extract/save the features again.
+If there are any existing ".pt" files in the corresponding directory, the script will ask if you want to remove them and extract/save the features again.
 
+## ShEMO AFTL -> Target Domain
+ShEMO is considered one of the target corpora. Therefore, we should fine-tune a model that has been trained on IEMOCAP using 10% of the ShEMO corpus, with the split based on speakers.
+
+To do this, run the `aftl_w2v2b_p_I_she_c2dcmha.py` script. This script will extract the ShEMO features, load the model trained on IEMOCAP, and fine-tune it using the extracted features. You can execute the script using the command `python aftl_w2v2b_p_I_she_c2dcmha.py`.
+
+The script will prompt you to provide the path to the ShEMO directory where all the ".wav" files are located. Since a checkpoint (saved model) is needed for fine-tuning, the script will also ask for the name of a checkpoint to load and fine-tune. If no response is given, it will load the "best_model000.pth" by default.
+
+If there are any existing ".pt" files in the corresponding directory, the script will ask if you want to remove them and extract/save the features again.
 
 ## *TODO*
 - Clear existing codes and add comments

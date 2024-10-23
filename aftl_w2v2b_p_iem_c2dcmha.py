@@ -5,6 +5,7 @@ from pathlib import Path
 from collections import defaultdict
 from tqdm import tqdm
 import enum
+import gc
 
 import numpy as np
 import os
@@ -89,11 +90,12 @@ if con == "y":
                 torch.save(features, os.path.join(str(wav_file)[:-4]+'p.pt'))
             f += 1
 
+
 # In[3]: Read processed data from system
 def read_IEMOCAP(audio_indexes, emotion_steps, is_training, filter_num):
     sample_num = 3000
     pernums_sample = np.arange(sample_num)
-    
+
     sample_label = torch.empty((sample_num, 1), dtype=torch.int8)
     sample_label_pf = torch.empty((sample_num, 1), dtype=torch.int8)
     sample_data = torch.empty((sample_num, 2, timesteps, filter_num), dtype=torch.float32)
@@ -137,7 +139,7 @@ def read_IEMOCAP(audio_indexes, emotion_steps, is_training, filter_num):
                     featv2 = torch.cat([featv2, feat2_], dim=1)
                 sample_data[sample_num, 0, :, :] = featv1[0, :timesteps, :]
                 sample_data[sample_num, 1, :, :] = featv2[0, :timesteps, :]
-                
+
                 sample_pros[sample_num, :] = featp
                 sample_label[sample_num] = em
                 sample_emt[emotion] = sample_emt[emotion] + 1
@@ -152,7 +154,7 @@ def read_IEMOCAP(audio_indexes, emotion_steps, is_training, filter_num):
                     end = begin + timesteps
                     sample_data[sample_num, 0, :, :] = featv1[0, begin:end, :]
                     sample_data[sample_num, 1, :, :] = featv2[0, begin:end, :]
-                    
+
                     sample_pros[sample_num, :] = featp
                     sample_label[sample_num] = em
                     sample_emt[emotion] = sample_emt[emotion] + 1
@@ -172,7 +174,7 @@ def read_IEMOCAP(audio_indexes, emotion_steps, is_training, filter_num):
         np.random.shuffle(arr)
         min_ = sample_pros.min(0)[0]
         max_ = sample_pros.max(0)[0]
-        torch.save({'min_':min_, 'max_':max_}, ".norm_metric.pt")
+        torch.save({'min_': min_, 'max_': max_}, ".norm_metric.pt")
         sample_pros = (sample_pros-min_)/(max_-min_)
         sample_data = sample_data[arr]
         sample_pros = sample_pros[arr]
@@ -370,6 +372,7 @@ def train(train_loader, valid_loader, test_loader, valid_label, test_label,
     best_valid_ac = 0
 
     ##########tarin model###########
+
     def init_weights(m):
         if m is torch.nn.Linear:
             m.weight.data.normal_(0.0, 0.1)
@@ -462,14 +465,14 @@ def train(train_loader, valid_loader, test_loader, valid_label, test_label,
         if verbos:
             # print results
             print("*****************************************************************")
-            print("Epoch: %05d" %(epoch+1))
+            print("Epoch: %05d" % (epoch+1))
             # print ("Training cost: %2.3g" %tcost)
             # print ("Training accuracy: %3.4g" %tracc)
-            print("Valid cost: %2.3g" %cost_valid)
-            print("Valid_Recall: %3.4g" %valid_rec_uw)
-            print("Best valid_RE: %3.4g" %best_valid_re)
-            print("Valid_Accuracy: %3.4g" %valid_acc_uw)
-            print("Best valid_Acc: %3.4g" %best_valid_ac)
+            print("Valid cost: %2.3g" % cost_valid)
+            print("Valid_Recall: %3.4g" % valid_rec_uw)
+            print("Best valid_RE: %3.4g" % best_valid_re)
+            print("Valid_Accuracy: %3.4g" % valid_acc_uw)
+            print("Best valid_Acc: %3.4g" % best_valid_ac)
             print('Valid Confusion Matrix:["ang","sad","hap","neu"]')
             print(valid_conf)
             print('Best Valid Confusion Matrix:["ang","sad","hap","neu"]')
@@ -520,10 +523,8 @@ def train(train_loader, valid_loader, test_loader, valid_label, test_label,
         best_valid_fs, test_ac, test_pr, test_wa, test_rec, test_fscore, \
         best_valid_conf, test_conf
 
+
 # In[7]:
-
-import gc
-
 total_metrics = {
     'acval': [],
     'actst': [],
