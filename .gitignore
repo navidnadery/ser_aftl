@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 checkpoint
 .norm_metric.pt
+*.jpg
 
 # C extensions
 *.so
