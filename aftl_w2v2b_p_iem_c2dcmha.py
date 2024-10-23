@@ -374,11 +374,11 @@ def train(train_loader, valid_loader, test_loader, valid_label, test_label,
     ##########tarin model###########
 
     def init_weights(m):
-        if m is torch.nn.Linear:
+        if type(m) is torch.nn.Linear:
             m.weight.data.normal_(0.0, 0.1)
             if m.bias is not None:
                 m.bias.data.fill_(0.1)
-        elif m is torch.nn.Conv2d:
+        elif type(m) is torch.nn.Conv2d:
             m.weight.data.normal_(0.0, 0.1)
             if m.bias is not None:
                 m.bias.data.fill_(0.1)
