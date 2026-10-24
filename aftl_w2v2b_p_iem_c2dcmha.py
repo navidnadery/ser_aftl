@@ -61,12 +61,96 @@ class generate_label(enum.IntEnum):
     others = 5
 
 
-# In[2]: Initialize prosody and wav2vec 2 model and  Extract and Save features as pt files in wav dirs
+# In[2]: Select wav2vec 2 transformer layers by CKA (Centered Kernel Alignment)
+cka_utts = 300          # number of utterances used to estimate CKA
+cka_frames_per_utt = 20  # frames randomly sampled from each utterance
+n_select = 2            # model_emo_mh takes 2 channels (Conv2d(2, ...))
+
+
+def linear_cka(x, y):
+    # x: (n, d1), y: (n, d2) -> linear CKA (Kornblith et al., 2019)
+    x = x - x.mean(0, keepdim=True)
+    y = y - y.mean(0, keepdim=True)
+    hsic = torch.linalg.norm(y.T @ x) ** 2
+    return (hsic / (torch.linalg.norm(x.T @ x) * torch.linalg.norm(y.T @ y))).item()
+
+
+def layer_cka_matrix(model, wav_files, sr):
+    rng = np.random.default_rng(0)
+    wav_files = rng.permutation(wav_files)[:cka_utts]
+    layer_frames = None
+    for wav_file in tqdm(wav_files, desc="CKA"):
+        waveform, sample_rate = torchaudio.load(wav_file)
+        waveform = waveform.to(device)
+        if sample_rate != sr:
+            waveform = torchaudio.functional.resample(waveform, sample_rate, sr)
+        with torch.inference_mode():
+            features, _ = model.extract_features(waveform)
+        if layer_frames is None:
+            layer_frames = [[] for _ in features]
+        t = features[0].shape[1]
+        idx = rng.choice(t, size=min(t, cka_frames_per_utt), replace=False)
+        for l, feat in enumerate(features):
+            layer_frames[l].append(feat[0, idx].double().cpu())
+    layer_frames = [torch.cat(fr, 0).to(device) for fr in layer_frames]
+    n_layers = len(layer_frames)
+    cka = np.eye(n_layers)
+    for i in range(n_layers):
+        for j in range(i+1, n_layers):
+            cka[i, j] = cka[j, i] = linear_cka(layer_frames[i], layer_frames[j])
+    return cka
+
+
+def select_layers_by_cka(cka, n_groups=n_select):
+    # Split the (ordered) layers into n_groups contiguous blocks maximizing the
+    # mean within-block CKA, then pick the medoid of each block, i.e. the layer
+    # most similar to the rest of its block (the block's best representative).
+    n_layers = cka.shape[0]
+
+    def block_score(blocks):
+        return np.mean([cka[np.ix_(b, b)].mean() for b in blocks])
+
+    best_blocks, best_score = None, -np.inf
+    for cuts in itertools.combinations(range(1, n_layers), n_groups-1):
+        bounds = (0,) + cuts + (n_layers,)
+        blocks = [list(range(bounds[k], bounds[k+1])) for k in range(n_groups)]
+        score = block_score(blocks)
+        if score > best_score:
+            best_blocks, best_score = blocks, score
+    selected = [b[int(np.argmax(cka[np.ix_(b, b)].mean(1)))] for b in best_blocks]
+    return selected, best_blocks
+
+
+def plot_cka(cka, selected):
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    plt.figure(figsize=(10, 8))
+    ax = sns.heatmap(cka, annot=True, cmap='viridis', fmt='.2f', vmin=0, vmax=1,
+                     xticklabels=range(1, cka.shape[0]+1), yticklabels=range(1, cka.shape[0]+1))
+    for l in selected:
+        ax.add_patch(plt.Rectangle((l, l), 1, 1, fill=False, edgecolor='red', lw=3))
+    plt.title('Linear CKA between wav2vec 2.0 transformer layers', fontsize=14)
+    plt.xlabel('Transformer layer', fontsize=14)
+    plt.ylabel('Transformer layer', fontsize=14)
+    plt.savefig("cka_layers.jpg")
+    plt.close()
+
+
+# In[3]: Initialize prosody and wav2vec 2 model and  Extract and Save features as pt files in wav dirs
 if con == "y":
     prosody = Prosody()
     bundle = torchaudio.pipelines.WAV2VEC2_BASE
     print("Sample Rate:", bundle.sample_rate)
     model = bundle.get_model().to(device)
+    model.eval()
+
+    all_wavs = [str(w) for w in data_dir.glob('Session*/sentences/wav/Ses0*_impro*/*.wav')]
+    cka = layer_cka_matrix(model, all_wavs, bundle.sample_rate)
+    selected_layers, layer_blocks = select_layers_by_cka(cka)
+    np.save("cka_layers.npy", cka)
+    plot_cka(cka, selected_layers)
+    logger.info(f"CKA layer blocks (0-based): {layer_blocks}")
+    logger.info(f"Selected wav2vec 2 transformer layers (0-based): {selected_layers}")
 
     ses = defaultdict(list)
     f = 0
@@ -84,14 +168,14 @@ if con == "y":
                 with torch.inference_mode():
                     #    conv_feats, _ = model.feature_extractor(waveform, waveform.shape[1])
                     features, _ = model.extract_features(waveform)
-                    features = torch.cat((features[0].detach().cpu(), features[8].detach().cpu()), 0)
+                    features = torch.cat([features[l].detach().cpu() for l in selected_layers], 0)
                     torch.save(features, os.path.join(str(wav_file)[:-4]+'v.pt'))
                 features = torch.nan_to_num(prosody.extract_features_file(str(wav_file), static=True, plots=False, fmt="torch"), nan=0)
                 torch.save(features, os.path.join(str(wav_file)[:-4]+'p.pt'))
             f += 1
 
 
-# In[3]: Read processed data from system
+# In[4]: Read processed data from system
 def read_IEMOCAP(audio_indexes, emotion_steps, is_training, filter_num):
     sample_num = 3000
     pernums_sample = np.arange(sample_num)
@@ -200,7 +284,7 @@ for i in range(1, 6):
         f += 1
 
 
-# In[4]: Define data loader and sampler
+# In[5]: Define data loader and sampler
 class data_emo(Dataset):
     def __init__(self, data, pros, label) -> None:
         super().__init__()
@@ -253,7 +337,7 @@ class balanced_sampler(Sampler):
         return len(self.data_source)
 
 
-# In[5]: Define models
+# In[6]: Define models
 class model_emo(nn.Module):
     def __init__(self, num_classes=4, Di1=16, Di2=32, Drc=32, Fc1=64, Fc2=64):
         super(model_emo, self).__init__()
@@ -354,7 +438,7 @@ class model_emo_mh(nn.Module):
         return att, seqrw.view(seqrw.shape[0], -1)
 
 
-# In[6]:
+# In[7]:
 learning_rate = 1e-3
 clip = 0
 verbos = 0
@@ -524,7 +608,7 @@ def train(train_loader, valid_loader, test_loader, valid_label, test_label,
         best_valid_conf, test_conf
 
 
-# In[7]:
+# In[8]:
 total_metrics = {
     'acval': [],
     'actst': [],
