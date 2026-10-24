@@ -102,21 +102,22 @@ def layer_cka_matrix(model, wav_files, sr):
 
 
 def select_layers_by_cka(cka, n_groups=n_select):
-    # Split the (ordered) layers into n_groups contiguous blocks maximizing the
-    # mean within-block CKA, then pick the medoid of each block, i.e. the layer
+    # Split the (ordered) layers into n_groups contiguous blocks minimizing the
+    # within-block scatter of the CKA kernel (kernel k-means cost restricted to
+    # contiguous blocks), then pick the medoid of each block, i.e. the layer
     # most similar to the rest of its block (the block's best representative).
     n_layers = cka.shape[0]
 
-    def block_score(blocks):
-        return np.mean([cka[np.ix_(b, b)].mean() for b in blocks])
+    def block_cost(blocks):
+        return sum(len(b) - cka[np.ix_(b, b)].sum() / len(b) for b in blocks)
 
-    best_blocks, best_score = None, -np.inf
+    best_blocks, best_cost = None, np.inf
     for cuts in itertools.combinations(range(1, n_layers), n_groups-1):
         bounds = (0,) + cuts + (n_layers,)
         blocks = [list(range(bounds[k], bounds[k+1])) for k in range(n_groups)]
-        score = block_score(blocks)
-        if score > best_score:
-            best_blocks, best_score = blocks, score
+        cost = block_cost(blocks)
+        if cost < best_cost:
+            best_blocks, best_cost = blocks, cost
     selected = [b[int(np.argmax(cka[np.ix_(b, b)].mean(1)))] for b in best_blocks]
     return selected, best_blocks
 
